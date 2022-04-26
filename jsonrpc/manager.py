@@ -42,7 +42,10 @@ class JSONRPCResponseManager(object):
     }
 
     @classmethod
-    def handle(cls, request_str, dispatcher):
+    def handle(cls, request_str, dispatcher, initial_context=None):
+        if initial_context is None:
+            initial_context = {}
+
         if isinstance(request_str, bytes):
             request_str = request_str.decode("utf-8")
 
@@ -56,23 +59,27 @@ class JSONRPCResponseManager(object):
         except JSONRPCInvalidRequestException:
             return JSONRPC20Response(error=JSONRPCInvalidRequest()._data)
 
-        return cls.handle_request(request, dispatcher)
+        return cls.handle_request(request, dispatcher, initial_context=initial_context)
 
     @classmethod
-    def handle_request(cls, request, dispatcher):
+    def handle_request(cls, request, dispatcher, initial_context=None):
         """ Handle request data.
 
         At this moment request has correct jsonrpc format.
 
         :param dict request: data parsed from request_str.
         :param jsonrpc.dispatcher.Dispatcher dispatcher:
+        :param initial_context Initial context that can store request variables like IP address, cookies, etc.
 
         .. versionadded: 1.8.0
 
         """
+        if initial_context is None:
+            initial_context = {}
+
         rs = request if isinstance(request, JSONRPC20BatchRequest) \
             else [request]
-        responses = [r for r in cls._get_responses(rs, dispatcher)
+        responses = [r for r in cls._get_responses(rs, dispatcher, context=initial_context)
                      if r is not None]
 
         # notifications
@@ -87,7 +94,7 @@ class JSONRPCResponseManager(object):
             return responses[0]
 
     @classmethod
-    def _get_responses(cls, requests, dispatcher):
+    def _get_responses(cls, requests, dispatcher, context=None):
         """ Response to each single JSON-RPC Request.
 
         :return iterator(JSONRPC20Response):
@@ -96,10 +103,13 @@ class JSONRPCResponseManager(object):
           TypeError inside the function is distinguished from Invalid Params.
 
         """
+        if context is None:
+            context = {}
+
         for request in requests:
             def make_response(**kwargs):
                 response = cls.RESPONSE_CLASS_MAP[request.JSONRPC_VERSION](
-                    _id=request._id, **kwargs)
+                    _id=request._id, context=context, **kwargs)
                 response.request = request
                 return response
 
@@ -110,7 +120,7 @@ class JSONRPCResponseManager(object):
                 output = make_response(error=JSONRPCMethodNotFound()._data)
             else:
                 try:
-                    result = method(*request.args, **request.kwargs)
+                    result = method(*request.args, **request.kwargs, context=context)
                 except JSONRPCDispatchException as e:
                     output = make_response(error=e.error._data)
                 except Exception as e:

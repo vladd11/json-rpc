@@ -2,7 +2,6 @@
 import os.path
 import sys
 from setuptools import setup, find_packages
-from jsonrpc import version
 
 
 def read(fname):
@@ -15,16 +14,16 @@ def read(fname):
 setup_requires = ["pytest-runner"] if sys.argv in ['pytest', 'test'] else []
 
 setup(
-    name="json-rpc",
-    version=version,
+    name="json-rpc-stateful",
+    version="1.13.4",
     packages=find_packages(),
     setup_requires=setup_requires,
     tests_require=["pytest"],
 
     # metadata for upload to PyPI
-    author="Kirill Pavlov",
-    author_email="k@p99.io",
-    url="https://github.com/pavlov99/json-rpc",
+    author="Vladislav Rozhkov",
+    author_email="rozhkov.2006@gmail.com",
+    url="https://github.com/vladd11/json-rpc",
     description="JSON-RPC transport implementation",
     long_description=read('README.rst'),
 
